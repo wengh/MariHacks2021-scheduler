@@ -1,9 +1,11 @@
 from functools import total_ordering
 import csv
 
+
 class ShiftPeriods:
     def __init__(self, periods):
         self.periods = periods
+
 
 monitor_shift_periods = ShiftPeriods([4, 4, 4, 3])
 interpreter_shift_periods = ShiftPeriods([3, 4, 4, 4])
@@ -20,22 +22,23 @@ shift_period_from_string = {
     "9 pm - 12 am": 3,
 }
 
+def make_2d_array(value, h, w):
+    return [[value] * w for i in range(h)]
 
-
-@total_ordering # make this support sorting
+@total_ordering  # make this support sorting
 class Person:
     def __init__(self):
         # availability[d][s] is True => person is available at shift s in day d
         # example: [[True, False, False, True], [False, False, True, True], ...]
-        self.availability = [[True] * 4] * 7
-        self.assigned = [[-1] * 4] * 7 # -1 means not assigned
+        self.availability = make_2d_array(True, 7, 4)
+        self.assigned = make_2d_array(-1, 7, 4)  # -1 means not assigned
         self.assigned_hour = 0
         self.available_hours = 15 * 7
         self.name = ''
         self.lang = ''
         self.shift_periods = interpreter_shift_periods
 
-    def set_unavailability(self, day, shift): #sets a shift available
+    def set_unavailability(self, day, shift):  # sets a shift available
         self.availability[day][shift] = False
         self.available_hours -= self.shift_periods.periods[shift]
 
@@ -46,33 +49,33 @@ class Person:
             for shift in range(len(day)):
                 if day[shift]:
                     self.available_hours += self.shift_periods.periods[shift]
-    
+
     def set_unavailability_from_str(self, day, string):
         periods = string.split(',')
-        #print(periods)
+        # print(periods)
         for period in periods:
             if period:
                 self.set_unavailability(day, shift_period_from_string[period.strip()])
-    
+
     def add_assigned_hour(self, day, shift, oncall):
         self.assigned[day][shift] = oncall
         self.assigned_hour += self.shift_periods.periods[shift]
-        
+
     def priority(self):
-        #return -100/self.available_hours + self.assigned_hour
+        # return -100/self.available_hours + self.assigned_hour
         return self.assigned_hour * 100000 + self.available_hours
-        #avail hours, assigned hours, 
-    
+        # avail hours, assigned hours,
+
     def __str__(self):
         return self.name
 
     def __repr__(self):
-        return self.str()
+        return self.name
 
-    def __eq__(self, other): # equality
+    def __eq__(self, other):  # equality
         return self.priority() == other.priority()
 
-    def __lt__(self, other): # lower than
+    def __lt__(self, other):  # lower than
         return self.priority() < other.priority()
 
 
@@ -82,31 +85,29 @@ def calculate(people, number_of_people_per_shift):
         for s in range(4):
             selected = []
             for i in range(len(people)):
-                if not people[i].availability[d][s]:
-                    people[i - len(selected)] = people[i] # move the unselected people forward
+                if not (people[i].availability[d][s] and len(selected) < number_of_people_per_shift):
+                    people[i - len(selected)] = people[i]  # move the unselected people forward
                 else:
-                    people[i].assigned[d][s] = len(selected)
+                    people[i].add_assigned_hour(d, s, len(selected))
                     selected.append(people[i])
-                    if len(selected) == number_of_people_per_shift:
-                        break
             for i in range(len(selected)):
-                people[-i - 1] = selected[i] # place selected people at the back of the queue
+                people[-i - 1] = selected[i]  # place selected people at the back of the queue
             print(selected)
 
 
 filename = 'data.csv'
 people = []
-with open (filename, newline='') as csvfile:
+with open(filename, newline='') as csvfile:
     data = tuple(csv.reader(csvfile, delimiter=',', quotechar='"'))
     for row in data:
         if not row[0]:
-            continue # skip if row doesn't contain valid data
+            continue  # skip if row doesn't contain valid data
         p = Person()
         p.shift_periods = interpreter_shift_periods
         p.name = row[0]
         p.language = row[1]
         for day in range(7):
-            #print(day, row[2 + day])
+            # print(day, row[2 + day])
             p.set_unavailability_from_str(day, row[2 + day])
         people.append(p)
 
