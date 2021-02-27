@@ -31,12 +31,13 @@ class Person:
         # availability[d][s] is True => person is available at shift s in day d
         # example: [[True, False, False, True], [False, False, True, True], ...]
         self.availability = make_2d_array(True, 7, 4)
-        self.assigned = make_2d_array(-1, 7, 4)  # -1 means not assigned
+        self.assigned = make_2d_array(0, 7, 4)  # -1 means not assigned
         self.assigned_hour = 0
         self.available_hours = 15 * 7
         self.name = ''
         self.lang = ''
         self.shift_periods = interpreter_shift_periods
+        self.extra_priority = 0
 
     def set_unavailability(self, day, shift):  # sets a shift available
         self.availability[day][shift] = False
@@ -57,13 +58,17 @@ class Person:
             if period:
                 self.set_unavailability(day, shift_period_from_string[period.strip()])
 
+    second_call_factor = 0.2  # by how much should we reduce the priority when we have the second call
+
     def add_assigned_hour(self, day, shift, oncall):
-        self.assigned[day][shift] = oncall
-        self.assigned_hour += self.shift_periods.periods[shift]
+        self.assigned[day][shift] = oncall + 1
+        shift_period = self.shift_periods.periods[shift]
+        self.extra_priority += shift_period / (oncall * Person.second_call_factor + 1)
+        self.assigned_hour += shift_period
 
     def priority(self):
         # return -100/self.available_hours + self.assigned_hour
-        return self.assigned_hour * 100000 + self.available_hours
+        return self.extra_priority * 1000 + self.available_hours
         # avail hours, assigned hours,
 
     def __str__(self):
@@ -114,4 +119,4 @@ with open(filename, newline='') as csvfile:
 calculate(people, 2)
 
 for p in people:
-    print(p.assigned_hour)
+    print(p.name, p.assigned_hour, p.assigned)
