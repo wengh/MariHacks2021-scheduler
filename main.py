@@ -33,6 +33,7 @@ class Person:
         self.availability = make_2d_array(True, 7, 4)
         self.assigned = make_2d_array(0, 7, 4)  # -1 means not assigned
         self.assigned_hour = 0
+        
         self.available_hours = 15 * 7
         self.name = ''
         self.lang = ''
